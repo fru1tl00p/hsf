@@ -69,8 +69,10 @@
 }
 
 function parseRegionLine(line) {
-    const parts = line.trim().split(/\s+/);
+    // More flexible splitting, removing any weird characters
+    const parts = line.trim().replace(/^–\s*/, '').split(/\s+/);
     
+    // Ensure we have enough parts
     if (parts.length < 7) {
         throw new Error('Insufficient line data: ' + line);
     }
@@ -82,14 +84,12 @@ function parseRegionLine(line) {
         hemisphere: locationMatch ? locationMatch[1] : '',
         latitude: locationMatch ? parseInt(locationMatch[2]) : 0,
         direction: locationMatch ? locationMatch[3] : '',
-        longitude: locationMatch 
-            ? (locationMatch[3] === 'W' ? -parseInt(locationMatch[4]) : parseInt(locationMatch[4]))
-            : 0,
+        longitude: locationMatch ? parseInt(locationMatch[4]) : 0,
         carrington: parseInt(parts[2]),
         area: parseInt(parts[3]),
         classification: parts[5],
         spotCount: parseInt(parts[6]),
-        magneticType: parts[7] || 'A'
+        magneticType: parts[7] || 'A'  // Default to Alpha if not specified
     };
 }
 
