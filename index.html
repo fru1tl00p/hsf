@@ -95,89 +95,94 @@ function parseRegionLine(line) {
 }
 
         function calculateHelioscreamFactor(region) {
-            let points = 0;
-            
-            // 1. Magnetic classification
-            if (region.magneticType.includes('Alpha')) {
-                points += 1;
-            } else if (region.magneticType.includes('Beta-Gamma-Delta')) {
-                points += 15;
-            } else if (region.magneticType.includes('Beta-Gamma')) {
-                points += 9;
-            } else if (region.magneticType.includes('Beta-Delta')) {
-                points += 6;
-            } else if (region.magneticType.includes('Beta')) {
-                points += 3;
-            }
-            
-            // 2. Spot classification
-            const spotClass = region.classification.charAt(0);
-            if (['D', 'E', 'F'].includes(spotClass)) {
-                points += 5;
-            } else if (spotClass === 'C') {
-                points += 3;
-            } else {
-                points += 1;
-            }
-            
-            // 3. Position relative to central meridian
-            const longitude = region.longitude;
-            
-            if (longitude <= 15) {
-                points += 10;
-            } else if (longitude <= 30) {
-                points += 7;
-            } else if (longitude <= 60) {
-                points += 3;
-            } else {
-                points += 1;
-            }
-            
-            // 4. Area size
-            const area = region.area;
-            if (area > 200) {
-                points += 7;
-            } else if (area > 100) {
-                points += 5;
-            } else if (area >= 50) {
-                points += 3;
-            } else {
-                points += 1;
-            }
-            
-            // 5. Sunspot count
-            const spotCount = region.spotCount;
-            if (spotCount >= 16) {
-                points += 7;
-            } else if (spotCount >= 9) {
-                points += 5;
-            } else if (spotCount >= 4) {
-                points += 3;
-            } else {
-                points += 1;
-            }
-            
-            // Calculate percentage
-            const percentage = (points / 44) * 100;
-            
-            // Determine risk category
-            let category;
-            if (percentage <= 25) {
-                category = 'Low';
-            } else if (percentage <= 50) {
-                category = 'Moderate';
-            } else if (percentage <= 75) {
-                category = 'High';
-            } else {
-                category = 'Extreme';
-            }
-            
-            return {
-                points,
-                percentage: percentage.toFixed(1),
-                category
-            };
-        }
+    let points = 0;
+    
+    // 1. Magnetic classification
+    if (region.magneticType.includes('Alpha')) {
+        points += 1;
+    } else if (region.magneticType.includes('Beta-Gamma-Delta')) {
+        points += 15;
+    } else if (region.magneticType.includes('Beta-Gamma')) {
+        points += 9;
+    } else if (region.magneticType.includes('Beta-Delta')) {
+        points += 6;
+    } else if (region.magneticType.includes('Beta')) {
+        points += 3;
+    }
+    
+    // 2. Spot classification
+    const spotClass = region.classification.charAt(0);
+    if (['D', 'E', 'F'].includes(spotClass)) {
+        points += 5;
+    } else if (spotClass === 'C') {
+        points += 3;
+    } else {
+        points += 1;
+    }
+    
+    // 3. Position relative to central meridian
+    points += calculateCentralMeridianPoints(region.longitude);
+    
+    // 4. Area size
+    const area = region.area;
+    if (area > 200) {
+        points += 7;
+    } else if (area > 100) {
+        points += 5;
+    } else if (area >= 50) {
+        points += 3;
+    } else {
+        points += 1;
+    }
+    
+    // 5. Sunspot count
+    const spotCount = region.spotCount;
+    if (spotCount >= 16) {
+        points += 7;
+    } else if (spotCount >= 9) {
+        points += 5;
+    } else if (spotCount >= 4) {
+        points += 3;
+    } else {
+        points += 1;
+    }
+    
+    // Calculate percentage
+    const percentage = (points / 44) * 100;
+    
+    // Determine risk category
+    let category;
+    if (percentage <= 25) {
+        category = 'Low';
+    } else if (percentage <= 50) {
+        category = 'Moderate';
+    } else if (percentage <= 75) {
+        category = 'High';
+    } else {
+        category = 'Extreme';
+    }
+    
+    return {
+        points,
+        percentage: percentage.toFixed(1),
+        category
+    };
+}
+
+function calculateCentralMeridianPoints(longitude) {
+    const absLong = Math.abs(longitude);
+    
+    if (absLong <= 15) {
+        return 10;  // Central
+    } else if (absLong <= 30) {
+        return 7;   // Near-central
+    } else if (absLong <= 60) {
+        return 3;   // Limb
+    } else {
+        return 1;   // Far limb
+    }
+}
+	    
     </script>
 </body>
 </html>
