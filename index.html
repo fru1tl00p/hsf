@@ -9,7 +9,7 @@
     </style>
 </head>
 <body>
-    <h1>Heliobiology Solar Function Calculator 0.03</h1>
+    <h1>Heliobiology Solar Function Calculator 0.04</h1>
     <button onclick="loadData()">Load Latest SRS Data</button>
     <div>
         <pre id="output">Click the button above to load data...</pre>
@@ -69,13 +69,16 @@
 }
 
 function parseRegionLine(line) {
-    // More flexible splitting, removing any weird characters
-    const parts = line.trim().replace(/^–\s*/, '').split(/\s+/);
+    // Remove any weird characters
+    line = line.replace(/^[–-]\s*/, '');
+    
+    const parts = line.trim().split(/\s+/);
     
     // Ensure we have enough parts
     if (parts.length < 7) {
         throw new Error('Insufficient line data: ' + line);
     }
+    
     const locationMatch = parts[1].match(/([NS])(\d+)([EW])(\d+)/);
     
     return {
@@ -89,10 +92,9 @@ function parseRegionLine(line) {
         area: parseInt(parts[3]),
         classification: parts[5],
         spotCount: parseInt(parts[6]),
-        magneticType: parts[7] || 'A'  // Default to Alpha if not specified
+        magneticType: parts[7] || 'A'
     };
 }
-
         function calculateHelioscreamFactor(region) {
     let points = 0;
     
