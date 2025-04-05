@@ -96,58 +96,77 @@ function parseRegionLine(line) {
     };
 }
 function calculateHelioscreamFactor(region) {
-    console.log('Region:', region);
+    console.log('Detailed Calculation for Region ' + region.number);
+    console.log('Full Region Object:', JSON.stringify(region, null, 2));
     
     let points = 0;
+    let pointBreakdown = {};
     
     // 1. Magnetic classification
     if (region.magneticType.includes('Alpha')) {
+        pointBreakdown.magneticType = 1;
         points += 1;
         console.log('Magnetic Type (Alpha): 1 point');
     } else if (region.magneticType.includes('Beta-Gamma-Delta')) {
+        pointBreakdown.magneticType = 15;
         points += 15;
         console.log('Magnetic Type (Beta-Gamma-Delta): 15 points');
     } else if (region.magneticType.includes('Beta-Gamma')) {
+        pointBreakdown.magneticType = 9;
         points += 9;
         console.log('Magnetic Type (Beta-Gamma): 9 points');
     } else if (region.magneticType.includes('Beta-Delta')) {
+        pointBreakdown.magneticType = 6;
         points += 6;
         console.log('Magnetic Type (Beta-Delta): 6 points');
     } else if (region.magneticType.includes('Beta')) {
+        pointBreakdown.magneticType = 3;
         points += 3;
         console.log('Magnetic Type (Beta): 3 points');
+    } else {
+        pointBreakdown.magneticType = 1;
+        points += 1;
+        console.log('Unknown Magnetic Type: 1 point (default)');
     }
     
     // 2. Spot classification
     const spotClass = region.classification.charAt(0);
     if (['D', 'E', 'F'].includes(spotClass)) {
+        pointBreakdown.spotClassification = 5;
         points += 5;
         console.log(`Spot Classification (${spotClass}, complex): 5 points`);
     } else if (spotClass === 'C') {
+        pointBreakdown.spotClassification = 3;
         points += 3;
         console.log('Spot Classification (C, moderate): 3 points');
     } else {
+        pointBreakdown.spotClassification = 1;
         points += 1;
         console.log(`Spot Classification (${spotClass}, simple): 1 point`);
     }
     
     // 3. Position relative to central meridian
     const meridianPoints = calculateCentralMeridianPoints(region.longitude);
+    pointBreakdown.meridianPosition = meridianPoints;
     points += meridianPoints;
     console.log(`Meridian Position (${region.longitude}): ${meridianPoints} points`);
     
     // 4. Area size
     const area = region.area;
     if (area > 200) {
+        pointBreakdown.areaSize = 7;
         points += 7;
         console.log(`Area (${area}): 7 points`);
     } else if (area > 100) {
+        pointBreakdown.areaSize = 5;
         points += 5;
         console.log(`Area (${area}): 5 points`);
     } else if (area >= 50) {
+        pointBreakdown.areaSize = 3;
         points += 3;
         console.log(`Area (${area}): 3 points`);
     } else {
+        pointBreakdown.areaSize = 1;
         points += 1;
         console.log(`Area (${area}): 1 point`);
     }
@@ -155,15 +174,19 @@ function calculateHelioscreamFactor(region) {
     // 5. Sunspot count
     const spotCount = region.spotCount;
     if (spotCount >= 16) {
+        pointBreakdown.spotCount = 7;
         points += 7;
         console.log(`Spot Count (${spotCount}): 7 points`);
     } else if (spotCount >= 9) {
+        pointBreakdown.spotCount = 5;
         points += 5;
         console.log(`Spot Count (${spotCount}): 5 points`);
     } else if (spotCount >= 4) {
+        pointBreakdown.spotCount = 3;
         points += 3;
         console.log(`Spot Count (${spotCount}): 3 points`);
     } else {
+        pointBreakdown.spotCount = 1;
         points += 1;
         console.log(`Spot Count (${spotCount}): 1 point`);
     }
@@ -183,7 +206,9 @@ function calculateHelioscreamFactor(region) {
         category = 'Extreme';
     }
     
+    console.log('Point Breakdown:', pointBreakdown);
     console.log(`Total Points: ${points}`);
+    console.log(`Total Points from Breakdown: ${Object.values(pointBreakdown).reduce((a, b) => a + b, 0)}`);
     console.log(`Percentage: ${percentage.toFixed(1)}%`);
     console.log(`Category: ${category}`);
     
