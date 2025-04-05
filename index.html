@@ -9,7 +9,7 @@
     </style>
 </head>
 <body>
-    <h1>Heliobiology Solar Function Calculator 0.08</h1>
+    <h1>Heliobiology Solar Function Calculator 0.09</h1>
     <button onclick="loadData()">Load Latest SRS Data</button>
     <div>
         <pre id="output">Click the button above to load data...</pre>
@@ -103,23 +103,23 @@ function calculateHelioscreamFactor(region) {
     let pointBreakdown = {};
     
     // 1. Magnetic classification
-    if (region.magneticType.includes('Alpha')) {
+    if (region.magneticType.includes('A')) {
         pointBreakdown.magneticType = 1;
         points += 1;
         console.log('Magnetic Type (Alpha): 1 point');
-    } else if (region.magneticType.includes('Beta-Gamma-Delta')) {
+    } else if (region.magneticType.includes('BGD')) {
         pointBreakdown.magneticType = 15;
         points += 15;
         console.log('Magnetic Type (Beta-Gamma-Delta): 15 points');
-    } else if (region.magneticType.includes('Beta-Gamma')) {
+    } else if (region.magneticType.includes('BG')) {
         pointBreakdown.magneticType = 9;
         points += 9;
         console.log('Magnetic Type (Beta-Gamma): 9 points');
-    } else if (region.magneticType.includes('Beta-Delta')) {
+    } else if (region.magneticType.includes('BD')) {
         pointBreakdown.magneticType = 6;
         points += 6;
         console.log('Magnetic Type (Beta-Delta): 6 points');
-    } else if (region.magneticType.includes('Beta')) {
+    } else if (region.magneticType.includes('B')) {
         pointBreakdown.magneticType = 3;
         points += 3;
         console.log('Magnetic Type (Beta): 3 points');
