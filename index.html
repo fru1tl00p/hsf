@@ -56,7 +56,7 @@
             const hsf = calculateHelioscreamFactor(region);
             
             // Add the original line plus HSF
-            output += `${line} | HSF: ${hsf.points} (${hsf.percentage}%) - ${hsf.category}\n`;
+            output += `${line} | HSF: ${hsf.points.toString().padStart(2, '0')} (${hsf.percentage}%) - ${hsf.category}\n`;
         } catch (e) {
             console.log('Parsing error for line:', line);
             console.log('Error:', e);
