@@ -9,7 +9,7 @@
     </style>
 </head>
 <body>
-    <h1>Heliobiology Solar Function Calculator 0.06</h1>
+    <h1>Heliobiology Solar Function Calculator 0.07</h1>
     <button onclick="loadData()">Load Latest SRS Data</button>
     <div>
         <pre id="output">Click the button above to load data...</pre>
@@ -95,57 +95,77 @@ function parseRegionLine(line) {
         magneticType: parts[7] || 'A'
     };
 }
-        function calculateHelioscreamFactor(region) {
+function calculateHelioscreamFactor(region) {
+    console.log('Region:', region);
+    
     let points = 0;
     
     // 1. Magnetic classification
     if (region.magneticType.includes('Alpha')) {
         points += 1;
+        console.log('Magnetic Type (Alpha): 1 point');
     } else if (region.magneticType.includes('Beta-Gamma-Delta')) {
         points += 15;
+        console.log('Magnetic Type (Beta-Gamma-Delta): 15 points');
     } else if (region.magneticType.includes('Beta-Gamma')) {
         points += 9;
+        console.log('Magnetic Type (Beta-Gamma): 9 points');
     } else if (region.magneticType.includes('Beta-Delta')) {
         points += 6;
+        console.log('Magnetic Type (Beta-Delta): 6 points');
     } else if (region.magneticType.includes('Beta')) {
         points += 3;
+        console.log('Magnetic Type (Beta): 3 points');
     }
     
     // 2. Spot classification
     const spotClass = region.classification.charAt(0);
     if (['D', 'E', 'F'].includes(spotClass)) {
         points += 5;
+        console.log(`Spot Classification (${spotClass}, complex): 5 points`);
     } else if (spotClass === 'C') {
         points += 3;
+        console.log('Spot Classification (C, moderate): 3 points');
     } else {
         points += 1;
+        console.log(`Spot Classification (${spotClass}, simple): 1 point`);
     }
     
     // 3. Position relative to central meridian
-    points += calculateCentralMeridianPoints(region.longitude);
+    const meridianPoints = calculateCentralMeridianPoints(region.longitude);
+    points += meridianPoints;
+    console.log(`Meridian Position (${region.longitude}): ${meridianPoints} points`);
     
     // 4. Area size
     const area = region.area;
     if (area > 200) {
         points += 7;
+        console.log(`Area (${area}): 7 points`);
     } else if (area > 100) {
         points += 5;
+        console.log(`Area (${area}): 5 points`);
     } else if (area >= 50) {
         points += 3;
+        console.log(`Area (${area}): 3 points`);
     } else {
         points += 1;
+        console.log(`Area (${area}): 1 point`);
     }
     
     // 5. Sunspot count
     const spotCount = region.spotCount;
     if (spotCount >= 16) {
         points += 7;
+        console.log(`Spot Count (${spotCount}): 7 points`);
     } else if (spotCount >= 9) {
         points += 5;
+        console.log(`Spot Count (${spotCount}): 5 points`);
     } else if (spotCount >= 4) {
         points += 3;
+        console.log(`Spot Count (${spotCount}): 3 points`);
     } else {
         points += 1;
+        console.log(`Spot Count (${spotCount}): 1 point`);
     }
     
     // Calculate percentage
@@ -162,6 +182,10 @@ function parseRegionLine(line) {
     } else {
         category = 'Extreme';
     }
+    
+    console.log(`Total Points: ${points}`);
+    console.log(`Percentage: ${percentage.toFixed(1)}%`);
+    console.log(`Category: ${category}`);
     
     return {
         points,
