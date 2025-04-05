@@ -29,63 +29,69 @@
         }
 
         function processData(text) {
-            // Extract the header and find where region data starts
-            const lines = text.split('\n');
-            const regionStartIndex = lines.findIndex(line => line.includes('Nmbr Location'));
-            
-            if (regionStartIndex === -1) {
-                return 'Could not parse SRS data format.';
-            }
+    // Extract the header and find where region data starts
+    const lines = text.split('\n');
+    const regionStartIndex = lines.findIndex(line => line.trim().startsWith('Num'));
+    
+    if (regionStartIndex === -1) {
+        return 'Could not parse SRS data format.';
+    }
 
-            // Format the output with original header
-            let output = lines.slice(0, regionStartIndex + 1).join('\n') + '\n';
+    // Format the output with original header
+    let output = lines.slice(0, regionStartIndex + 1).join('\n') + '\n';
+    
+    // Process each region line
+    for (let i = regionStartIndex + 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line || line.startsWith('IA.')) break;
+        
+        // Try to parse the region data
+        try {
+            const region = parseRegionLine(line);
+            const hsf = calculateHelioscreamFactor(region);
             
-            // Process each region line
-            for (let i = regionStartIndex + 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line || line.startsWith('IA.')) break;
-                
-                // Try to parse the region data
-                try {
-                    const region = parseRegionLine(line);
-                    const hsf = calculateHelioscreamFactor(region);
-                    
-                    // Add the original line plus HSF
-                    output += `${line} | HSF: ${hsf.points} (${hsf.percentage}%) - ${hsf.category}\n`;
-                } catch (e) {
-                    // If parsing fails, just include the original line
-                    output += line + '\n';
-                }
-            }
-            
-            // Add the rest of the report
-            const restIndex = lines.findIndex(line => line.startsWith('IA.'));
-            if (restIndex !== -1) {
-                output += '\n' + lines.slice(restIndex).join('\n');
-            }
-            
-            return output;
+            // Add the original line plus HSF
+            output += `${line} | HSF: ${hsf.points} (${hsf.percentage}%) - ${hsf.category}\n`;
+        } catch (e) {
+            // If parsing fails, just include the original line
+            output += line + '\n';
         }
+    }
+    
+    // Add the rest of the report
+    const restIndex = lines.findIndex(line => line.startsWith('IA.'));
+    if (restIndex !== -1) {
+        output += '\n' + lines.slice(restIndex).join('\n');
+    }
+    
+    return output;
+}
 
-        function parseRegionLine(line) {
-            // Format: 4048 S16W02   280  0530 Fkc  16   32 Beta-Gamma
-            const parts = line.split(/\s+/);
-            const locationMatch = parts[1].match(/([NS])(\d+)([EW])(\d+)/);
-            
-            return {
-                number: parts[0],
-                location: parts[1],
-                hemisphere: locationMatch ? locationMatch[1] : '',
-                latitude: locationMatch ? parseInt(locationMatch[2]) : 0,
-                direction: locationMatch ? locationMatch[3] : '',
-                longitude: locationMatch ? parseInt(locationMatch[4]) : 0,
-                carrington: parseInt(parts[2]),
-                area: parseInt(parts[3]),
-                classification: parts[4],
-                spotCount: parseInt(parts[6]),
-                magneticType: parts.slice(7).join(' ')
-            };
-        }
+function parseRegionLine(line) {
+    // Split the line, handling multiple spaces
+    const parts = line.split(/\s+/);
+    
+    // Ensure we have enough parts
+    if (parts.length < 8) {
+        throw new Error('Insufficient line data');
+    }
+
+    const locationMatch = parts[1].match(/([NS])(\d+)([EW])(\d+)/);
+    
+    return {
+        number: parts[0],
+        location: parts[1],
+        hemisphere: locationMatch ? locationMatch[1] : '',
+        latitude: locationMatch ? parseInt(locationMatch[2]) : 0,
+        direction: locationMatch ? locationMatch[3] : '',
+        longitude: locationMatch ? parseInt(locationMatch[4]) : 0,
+        carrington: parseInt(parts[2]),
+        area: parseInt(parts[3]),
+        classification: parts[5],
+        spotCount: parseInt(parts[6]),
+        magneticType: parts[7]
+    };
+}
 
         function calculateHelioscreamFactor(region) {
             let points = 0;
