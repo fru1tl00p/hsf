@@ -260,8 +260,7 @@ function copyDetailedStats() {
         return;
     }
     
-    const text = 
-`Detailed Space Weather Statistics (${processedData.current.time}):
+    const text = `Detailed Space Weather Statistics (${processedData.current.time}):
 
 MAGNETIC FIELD:
 - Bt (current): ${processedData.current.bt.toFixed(1)} nT
