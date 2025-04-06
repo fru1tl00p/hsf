@@ -159,7 +159,49 @@ function processData(magData, plasmaData) {
         speed: speedStats,
         density: densityStats
     };
-    
+	
+    // Find temperature index in headers
+const tempIndex = plasmaHeaders.indexOf('temperature');
+if (tempIndex === -1) {
+    console.error('Could not find temperature parameter in data');
+}
+
+// Extract current temperature
+const currentTemp = parseFloat(latestPlasma[tempIndex]) / 1000; // Convert to Kelvin (K) for readability
+
+// Calculate dynamic pressure (n*mp*v²)
+// Simplified calculation: P = 1.6726e-6 * n * v² (nanoPascals)
+const protonMass = 1.6726e-27; // kg
+const conversionFactor = 1e9; // to nanoPascals
+const currentDensitySI = currentDensity * 1e6; // convert to particles/m³
+const currentSpeedSI = currentSpeed * 1000; // convert to m/s
+const currentPressure = (currentDensitySI * protonMass * Math.pow(currentSpeedSI, 2) * conversionFactor);
+
+// Calculate statistics for temperature
+const tempValues = validPlasmaData
+    .map(row => parseFloat(row[tempIndex]) / 1000)
+    .filter(val => !isNaN(val));
+
+const tempStats = calculateStats(tempValues);
+
+// Calculate dynamic pressure for each data point and get statistics
+const pressureValues = validPlasmaData.map(row => {
+    const density = parseFloat(row[densityIndex]);
+    const speed = parseFloat(row[speedIndex]);
+    if (isNaN(density) || isNaN(speed)) return NaN;
+    const densitySI = density * 1e6; // convert to particles/m³
+    const speedSI = speed * 1000; // convert to m/s
+    return (densitySI * protonMass * Math.pow(speedSI, 2) * conversionFactor);
+}).filter(val => !isNaN(val));
+
+const pressureStats = calculateStats(pressureValues);
+
+// Add to processed data
+processedData.current.temperature = currentTemp;
+processedData.current.pressure = currentPressure;
+
+processedData.stats.temperature = tempStats;
+processedData.stats.pressure = pressureStats;
     // Update the UI
     updateUI();
 }
@@ -228,7 +270,17 @@ function updateUI() {
     document.getElementById('speed-max').textContent = `${processedData.stats.speed.max.toFixed(0)} km/s`;
     document.getElementById('density-avg').textContent = `${processedData.stats.density.avg.toFixed(1)} p/cm³`;
     document.getElementById('density-max').textContent = `${processedData.stats.density.max.toFixed(1)} p/cm³`;
-    
+
+	// Update temperature
+	document.getElementById('temp-current').textContent = `${processedData.current.temperature.toFixed(0)} × 10³ K`;
+	document.getElementById('temp-avg').textContent = `${processedData.stats.temperature.avg.toFixed(0)} × 10³ K`;
+	document.getElementById('temp-max').textContent = `${processedData.stats.temperature.max.toFixed(0)} × 10³ K`;
+
+	// Update dynamic pressure
+	document.getElementById('pressure-current').textContent = `${processedData.current.pressure.toFixed(2)} nPa`;
+	document.getElementById('pressure-avg').textContent = `${processedData.stats.pressure.avg.toFixed(2)} nPa`;
+	document.getElementById('pressure-max').textContent = `${processedData.stats.pressure.max.toFixed(2)} nPa`;
+	
     // Update last updated time
     const now = new Date();
     document.getElementById('last-update').textContent = 
@@ -242,13 +294,13 @@ function copySummary() {
         return;
     }
     
-    const text = `Space Weather Summary (${processedData.current.time}):
+const text = `Space Weather Summary (${processedData.current.time}):
 - Bt: ${processedData.current.bt.toFixed(1)} nT (6h avg: ${processedData.stats.bt.avg.toFixed(1)} nT)
 - Bz: ${processedData.current.bz.toFixed(1)} nT (${processedData.stats.bzSouthPercent}% southward last 6h)
 - Solar Wind: ${processedData.current.speed.toFixed(0)} km/s (6h avg: ${processedData.stats.speed.avg.toFixed(0)} km/s)
-- Proton Density: ${processedData.current.density < 0.1 ? 
-    processedData.current.density.toFixed(2) : 
-    processedData.current.density.toFixed(1)} p/cm³`;
+- Proton Density: ${processedData.current.density < 0.1 ? processedData.current.density.toFixed(2) : processedData.current.density.toFixed(1)} p/cm³
+- Temperature: ${processedData.current.temperature.toFixed(0)} × 10³ K
+- Dynamic Pressure: ${processedData.current.pressure.toFixed(2)} nPa`;
 
     copyToClipboard(text, 'copy-summary');
 }
@@ -274,7 +326,14 @@ SOLAR WIND:
 - Speed 6-hour: avg ${processedData.stats.speed.avg.toFixed(0)} km/s, max ${processedData.stats.speed.max.toFixed(0)} km/s
 
 - Density (current): ${processedData.current.density < 0.1 ? processedData.current.density.toFixed(2) : processedData.current.density.toFixed(1)} p/cm³
-- Density 6-hour: avg ${processedData.stats.density.avg < 0.1 ? processedData.stats.density.avg.toFixed(2) : processedData.stats.density.avg.toFixed(1)} p/cm³, max ${processedData.stats.density.max.toFixed(1)} p/cm³`;
+- Density 6-hour: avg ${processedData.stats.density.avg < 0.1 ? processedData.stats.density.avg.toFixed(2) : processedData.stats.density.avg.toFixed(1)} p/cm³, max ${processedData.stats.density.max.toFixed(1)} p/cm³
+
+ADDITIONAL PARAMETERS:
+- Temperature (current): ${processedData.current.temperature.toFixed(0)} × 10³ K
+- Temperature 6-hour: avg ${processedData.stats.temperature.avg.toFixed(0)} × 10³ K, max ${processedData.stats.temperature.max.toFixed(0)} × 10³ K
+
+- Dynamic Pressure (current): ${processedData.current.pressure.toFixed(2)} nPa
+- Dynamic Pressure 6-hour: avg ${processedData.stats.pressure.avg.toFixed(2)} nPa, max ${processedData.stats.pressure.max.toFixed(2)} nPa`;
 
     copyToClipboard(text, 'copy-detailed');
 }
