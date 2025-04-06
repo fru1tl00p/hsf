@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Weather | Heliobiology Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            line-height: 1.5;
+        }
+        .data-section {
+            margin-bottom: 25px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .parameter {
+            margin-bottom: 10px;
+            display: flex;
+        }
+        .parameter-name {
+            font-weight: bold;
+            width: 200px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .stat-box {
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 3px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.8em;
+            color: #666;
+        }
+        .stat-value {
+            font-weight: bold;
+        }
+        .button-container {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #last-update {
+            margin: 15px 0;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Space Weather Conditions</h1>
+    <p>Current and 6-hour summary of key heliobiology parameters:</p>
+    
+    <div class="data-section">
+        <h2>Magnetic Field (Current)</h2>
+        <div class="parameter">
+            <div class="parameter-name">Bt (Total IMF):</div>
+            <div class="parameter-value" id="bt-current">Loading...</div>
+        </div>
+        <div class="parameter">
+            <div class="parameter-name">Bz (North-South):</div>
+            <div class="parameter-value" id="bz-current">Loading...</div>
+        </div>
+        
+        <h3>6-Hour Bt Statistics</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Average</div>
+                <div class="stat-value" id="bt-avg">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Minimum</div>
+                <div class="stat-value" id="bt-min">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Maximum</div>
+                <div class="stat-value" id="bt-max">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Std Dev</div>
+                <div class="stat-value" id="bt-std">-</div>
+            </div>
+        </div>
+        
+        <h3>6-Hour Bz Statistics</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Average</div>
+                <div class="stat-value" id="bz-avg">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Minimum</div>
+                <div class="stat-value" id="bz-min">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Maximum</div>
+                <div class="stat-value" id="bz-max">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">% Time South</div>
+                <div class="stat-value" id="bz-south-pct">-</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="data-section">
+        <h2>Solar Wind (Current)</h2>
+        <div class="parameter">
+            <div class="parameter-name">Speed:</div>
+            <div class="parameter-value" id="speed-current">Loading...</div>
+        </div>
+        <div class="parameter">
+            <div class="parameter-name">Density:</div>
+            <div class="parameter-value" id="density-current">Loading...</div>
+        </div>
+        
+        <h3>6-Hour Solar Wind Statistics</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Avg Speed</div>
+                <div class="stat-value" id="speed-avg">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Max Speed</div>
+                <div class="stat-value" id="speed-max">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Avg Density</div>
+                <div class="stat-value" id="density-avg">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Max Density</div>
+                <div class="stat-value" id="density-max">-</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="button-container">
+        <button id="copy-summary">Copy Summary</button>
+        <button id="copy-detailed">Copy Detailed Stats</button>
+    </div>
+    
+    <div id="last-update">Last updated: --</div>
+    
+    <p><a href="index.html">← Return to Helioscream Factor</a></p>
+    
+    <script src="space-weather.js"></script>
+</body>
+</html>
