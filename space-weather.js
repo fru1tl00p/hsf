@@ -247,7 +247,9 @@ function copySummary() {
 - Bt: ${processedData.current.bt.toFixed(1)} nT (6h avg: ${processedData.stats.bt.avg.toFixed(1)} nT)
 - Bz: ${processedData.current.bz.toFixed(1)} nT (${processedData.stats.bzSouthPercent}% southward last 6h)
 - Solar Wind: ${processedData.current.speed.toFixed(0)} km/s (6h avg: ${processedData.stats.speed.avg.toFixed(0)} km/s)
-- Proton Density: ${processedData.current.density.toFixed(1)} p/cm³`;
+- Proton Density: ${processedData.current.density < 0.1 ? 
+    processedData.current.density.toFixed(2) : 
+    processedData.current.density.toFixed(1)} p/cm³
 
     copyToClipboard(text, 'copy-summary');
 }
@@ -274,8 +276,12 @@ SOLAR WIND:
 - Speed (current): ${processedData.current.speed.toFixed(0)} km/s
 - Speed 6-hour: avg ${processedData.stats.speed.avg.toFixed(0)} km/s, max ${processedData.stats.speed.max.toFixed(0)} km/s
 
-- Density (current): ${processedData.current.density.toFixed(1)} p/cm³
-- Density 6-hour: avg ${processedData.stats.density.avg.toFixed(1)} p/cm³, max ${processedData.stats.density.max.toFixed(1)} p/cm³`;
+- Density (current): ${processedData.current.density < 0.1 ? 
+    processedData.current.density.toFixed(2) : 
+    processedData.current.density.toFixed(1)} p/cm³
+- Density 6-hour: avg ${processedData.stats.density.avg < 0.1 ? 
+    processedData.stats.density.avg.toFixed(2) : 
+    processedData.stats.density.avg.toFixed(1)} p/cm³, max ${processedData.stats.density.max.toFixed(1)} p/cm³`;
 
     copyToClipboard(text, 'copy-detailed');
 }
