@@ -242,8 +242,7 @@ function copySummary() {
         return;
     }
     
-    const text = 
-`Space Weather Summary (${processedData.current.time}):
+    const text = `Space Weather Summary (${processedData.current.time}):
 - Bt: ${processedData.current.bt.toFixed(1)} nT (6h avg: ${processedData.stats.bt.avg.toFixed(1)} nT)
 - Bz: ${processedData.current.bz.toFixed(1)} nT (${processedData.stats.bzSouthPercent}% southward last 6h)
 - Solar Wind: ${processedData.current.speed.toFixed(0)} km/s (6h avg: ${processedData.stats.speed.avg.toFixed(0)} km/s)
