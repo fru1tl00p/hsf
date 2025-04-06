@@ -274,12 +274,8 @@ SOLAR WIND:
 - Speed (current): ${processedData.current.speed.toFixed(0)} km/s
 - Speed 6-hour: avg ${processedData.stats.speed.avg.toFixed(0)} km/s, max ${processedData.stats.speed.max.toFixed(0)} km/s
 
-- Density (current): ${processedData.current.density < 0.1 ? 
-    processedData.current.density.toFixed(2) : 
-    processedData.current.density.toFixed(1)} p/cm³
-- Density 6-hour: avg ${processedData.stats.density.avg < 0.1 ? 
-    processedData.stats.density.avg.toFixed(2) : 
-    processedData.stats.density.avg.toFixed(1)} p/cm³, max ${processedData.stats.density.max.toFixed(1)} p/cm³`;
+- Density (current): ${processedData.current.density < 0.1 ? processedData.current.density.toFixed(2) : processedData.current.density.toFixed(1)} p/cm³
+- Density 6-hour: avg ${processedData.stats.density.avg < 0.1 ? processedData.stats.density.avg.toFixed(2) : processedData.stats.density.avg.toFixed(1)} p/cm³, max ${processedData.stats.density.max.toFixed(1)} p/cm³`;
 
     copyToClipboard(text, 'copy-detailed');
 }
