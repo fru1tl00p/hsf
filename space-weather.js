@@ -248,7 +248,7 @@ function copySummary() {
 - Solar Wind: ${processedData.current.speed.toFixed(0)} km/s (6h avg: ${processedData.stats.speed.avg.toFixed(0)} km/s)
 - Proton Density: ${processedData.current.density < 0.1 ? 
     processedData.current.density.toFixed(2) : 
-    processedData.current.density.toFixed(1)} p/cm³
+    processedData.current.density.toFixed(1)} p/cm³`;
 
     copyToClipboard(text, 'copy-summary');
 }
@@ -261,7 +261,6 @@ function copyDetailedStats() {
     }
     
     const text = `Detailed Space Weather Statistics (${processedData.current.time}):
-
 MAGNETIC FIELD:
 - Bt (current): ${processedData.current.bt.toFixed(1)} nT
 - Bt 6-hour: avg ${processedData.stats.bt.avg.toFixed(1)} nT, range ${processedData.stats.bt.min.toFixed(1)}-${processedData.stats.bt.max.toFixed(1)} nT, σ ${processedData.stats.bt.std.toFixed(1)} nT
