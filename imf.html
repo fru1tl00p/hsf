@@ -69,21 +69,35 @@
             color: #666;
             font-style: italic;
         }
+        #refresh-button {
+            background-color: #2196F3;
+        }
+        #refresh-button:hover {
+            background-color: #0b7dda;
+        }
+        .loading-indicator {
+            display: none;
+            margin-left: 10px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <h1>Space Weather Conditions</h1>
     <p>Current and 6-hour summary of key heliobiology parameters:</p>
     
+    <button id="refresh-button">Load/Refresh Data</button>
+    <span id="loading-indicator" class="loading-indicator">Loading data...</span>
+    
     <div class="data-section">
         <h2>Magnetic Field (Current)</h2>
         <div class="parameter">
             <div class="parameter-name">Bt (Total IMF):</div>
-            <div class="parameter-value" id="bt-current">Loading...</div>
+            <div class="parameter-value" id="bt-current">Not loaded</div>
         </div>
         <div class="parameter">
             <div class="parameter-name">Bz (North-South):</div>
-            <div class="parameter-value" id="bz-current">Loading...</div>
+            <div class="parameter-value" id="bz-current">Not loaded</div>
         </div>
         
         <h3>6-Hour Bt Statistics</h3>
@@ -131,11 +145,11 @@
         <h2>Solar Wind (Current)</h2>
         <div class="parameter">
             <div class="parameter-name">Speed:</div>
-            <div class="parameter-value" id="speed-current">Loading...</div>
+            <div class="parameter-value" id="speed-current">Not loaded</div>
         </div>
         <div class="parameter">
             <div class="parameter-name">Density:</div>
-            <div class="parameter-value" id="density-current">Loading...</div>
+            <div class="parameter-value" id="density-current">Not loaded</div>
         </div>
         
         <h3>6-Hour Solar Wind Statistics</h3>
@@ -164,7 +178,7 @@
         <button id="copy-detailed">Copy Detailed Stats</button>
     </div>
     
-    <div id="last-update">Last updated: --</div>
+    <div id="last-update">Data not yet loaded</div>
     
     <p><a href="index.html">← Return to Helioscream Factor</a></p>
     
