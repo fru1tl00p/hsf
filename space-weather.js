@@ -1,9 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Fetch initial data
-    fetchSpaceWeatherData();
-    
-    // Refresh data every 10 minutes
-    setInterval(fetchSpaceWeatherData, 10 * 60 * 1000);
+    // Set up refresh button
+    document.getElementById('refresh-button').addEventListener('click', fetchSpaceWeatherData);
     
     // Set up copy buttons
     document.getElementById('copy-summary').addEventListener('click', copySummary);
@@ -17,6 +14,10 @@ let processedData = {
 };
 
 async function fetchSpaceWeatherData() {
+    // Show loading indicator
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'inline';
+    
     try {
         // SWPC API endpoints for 6-hour data
         const magUrl = 'https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json';
@@ -39,6 +40,10 @@ async function fetchSpaceWeatherData() {
         document.getElementById('bz-current').textContent = 'Error loading data';
         document.getElementById('speed-current').textContent = 'Error loading data';
         document.getElementById('density-current').textContent = 'Error loading data';
+        document.getElementById('last-update').textContent = 'Failed to load data: ' + error.message;
+    } finally {
+        // Hide loading indicator
+        loadingIndicator.style.display = 'none';
     }
 }
 
@@ -46,13 +51,15 @@ function processData(magData, plasmaData) {
     // Ensure we have data
     if (magData.length < 2 || plasmaData.length < 2) {
         console.error('Insufficient data received');
+        document.getElementById('last-update').textContent = 'Insufficient data received from SWPC API';
         return;
     }
     
-    // Get column indices from headers
+    // Get column indices from headers (first array in the JSON)
     const magHeaders = magData[0];
     const plasmaHeaders = plasmaData[0];
     
+    // Find indices of the parameters we need
     const btIndex = magHeaders.indexOf('bt');
     const bzIndex = magHeaders.indexOf('bz_gsm');
     const timeIndex = magHeaders.indexOf('time_tag');
@@ -60,13 +67,45 @@ function processData(magData, plasmaData) {
     const speedIndex = plasmaHeaders.indexOf('speed');
     const densityIndex = plasmaHeaders.indexOf('density');
     
-    // Extract data for calculations
-    const magDataValues = magData.slice(1); // Skip header row
-    const plasmaDataValues = plasmaData.slice(1); // Skip header row
+    // Check if we found all necessary indices
+    if (btIndex === -1 || bzIndex === -1 || timeIndex === -1) {
+        console.error('Could not find required magnetic field parameters in data');
+        document.getElementById('last-update').textContent = 'Error: Missing magnetic field parameters in data';
+        return;
+    }
+    
+    if (speedIndex === -1 || densityIndex === -1) {
+        console.error('Could not find required plasma parameters in data');
+        document.getElementById('last-update').textContent = 'Error: Missing plasma parameters in data';
+        return;
+    }
+    
+    // Extract data for calculations (skip header row)
+    const magDataValues = magData.slice(1);
+    const plasmaDataValues = plasmaData.slice(1);
+    
+    // Filter out rows with missing data
+    const validMagData = magDataValues.filter(row => 
+        row.length > Math.max(btIndex, bzIndex, timeIndex) && 
+        !isNaN(parseFloat(row[btIndex])) && 
+        !isNaN(parseFloat(row[bzIndex]))
+    );
+    
+    const validPlasmaData = plasmaDataValues.filter(row => 
+        row.length > Math.max(speedIndex, densityIndex) && 
+        !isNaN(parseFloat(row[speedIndex])) && 
+        !isNaN(parseFloat(row[densityIndex]))
+    );
+    
+    if (validMagData.length === 0 || validPlasmaData.length === 0) {
+        console.error('No valid data points found');
+        document.getElementById('last-update').textContent = 'Error: No valid data points found';
+        return;
+    }
     
     // Current values (most recent data points)
-    const latestMag = magDataValues[magDataValues.length - 1];
-    const latestPlasma = plasmaDataValues[plasmaDataValues.length - 1];
+    const latestMag = validMagData[validMagData.length - 1];
+    const latestPlasma = validPlasmaData[validPlasmaData.length - 1];
     
     const currentBt = parseFloat(latestMag[btIndex]);
     const currentBz = parseFloat(latestMag[bzIndex]);
@@ -75,14 +114,14 @@ function processData(magData, plasmaData) {
     const lastUpdateTime = latestMag[timeIndex];
     
     // Calculate statistics for Bt
-    const btValues = magDataValues
+    const btValues = validMagData
         .map(row => parseFloat(row[btIndex]))
         .filter(val => !isNaN(val));
     
     const btStats = calculateStats(btValues);
     
     // Calculate statistics for Bz
-    const bzValues = magDataValues
+    const bzValues = validMagData
         .map(row => parseFloat(row[bzIndex]))
         .filter(val => !isNaN(val));
     
@@ -90,13 +129,13 @@ function processData(magData, plasmaData) {
     const bzSouthPercent = (bzValues.filter(val => val < 0).length / bzValues.length * 100).toFixed(1);
     
     // Calculate statistics for solar wind
-    const speedValues = plasmaDataValues
+    const speedValues = validPlasmaData
         .map(row => parseFloat(row[speedIndex]))
         .filter(val => !isNaN(val));
     
     const speedStats = calculateStats(speedValues);
     
-    const densityValues = plasmaDataValues
+    const densityValues = validPlasmaData
         .map(row => parseFloat(row[densityIndex]))
         .filter(val => !isNaN(val));
     
@@ -124,6 +163,8 @@ function processData(magData, plasmaData) {
 }
 
 function calculateStats(values) {
+    if (values.length === 0) return { avg: 0, min: 0, max: 0, std: 0 };
+    
     const sum = values.reduce((a, b) => a + b, 0);
     const avg = sum / values.length;
     const min = Math.min(...values);
@@ -189,6 +230,12 @@ function updateUI() {
 }
 
 function copySummary() {
+    // Only proceed if we have data
+    if (!processedData.current.time) {
+        alert('Please load data first before copying.');
+        return;
+    }
+    
     const text = 
 `Space Weather Summary (${processedData.current.time}):
 - Bt: ${processedData.current.bt.toFixed(1)} nT (6h avg: ${processedData.stats.bt.avg.toFixed(1)} nT)
@@ -200,6 +247,12 @@ function copySummary() {
 }
 
 function copyDetailedStats() {
+    // Only proceed if we have data
+    if (!processedData.current.time) {
+        alert('Please load data first before copying.');
+        return;
+    }
+    
     const text = 
 `Detailed Space Weather Statistics (${processedData.current.time}):
 
