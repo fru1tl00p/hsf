@@ -110,7 +110,9 @@ function processData(magData, plasmaData) {
     const currentBt = parseFloat(latestMag[btIndex]);
     const currentBz = parseFloat(latestMag[bzIndex]);
     const currentSpeed = parseFloat(latestPlasma[speedIndex]);
-    const currentDensity = parseFloat(latestPlasma[densityIndex]);
+    // Extract density with special handling for very small values
+    const densityValue = parseFloat(latestPlasma[densityIndex]);
+    const currentDensity = isNaN(densityValue) ? 0 : densityValue;
     const lastUpdateTime = latestMag[timeIndex];
     
     // Calculate statistics for Bt
@@ -205,7 +207,11 @@ function updateUI() {
     }
     
     document.getElementById('speed-current').textContent = `${processedData.current.speed.toFixed(0)} km/s`;
-    document.getElementById('density-current').textContent = `${processedData.current.density.toFixed(1)} p/cm³`;
+    // Display density with 2 decimal places for small values
+    const densityDisplay = processedData.current.density < 0.1 ? 
+        `${processedData.current.density.toFixed(2)} p/cm³` : 
+        `${processedData.current.density.toFixed(1)} p/cm³`;
+    document.getElementById('density-current').textContent = densityDisplay;
     
     // Update statistics
     document.getElementById('bt-avg').textContent = `${processedData.stats.bt.avg.toFixed(1)} nT`;
