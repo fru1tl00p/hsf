@@ -1,2 +1,0 @@
-# hsf
-Heliobiology Solar Factors
