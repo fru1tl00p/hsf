@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>L1</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="kicker">SWPC RTSW · UTC</p>
+        <h1>L1</h1>
+        <p class="lede">Manual pull of the last day. Speed, density, Bt, Bz. Nothing is fetched until you tap.</p>
+      </header>
+
+      <div class="controls">
+        <div class="row">
+          <button id="fetch" type="button">Fetch</button>
+          <button id="copy-6h" type="button" class="ghost" data-part="6h" disabled>Copy 6 h</button>
+          <button id="copy-24h" type="button" class="ghost" data-part="24h" disabled>Copy 24 h</button>
+          <button id="copy-both" type="button" class="ghost" data-part="both" disabled>Copy both</button>
+        </div>
+        <label>
+          Note, included at the top of the paste
+          <input id="note" type="text" placeholder="simmering 4–5/10, poor sleep" autocomplete="off" />
+        </label>
+      </div>
+
+      <div class="grid">
+        <section>
+          <h2>Fetch log</h2>
+          <p id="storage" class="bad" hidden></p>
+          <div class="panel" id="log"><p class="muted">No pull yet.</p></div>
+        </section>
+        <section>
+          <h2>Share block</h2>
+          <pre class="panel" id="share">Fetch once. This is the text the copy buttons use.</pre>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
