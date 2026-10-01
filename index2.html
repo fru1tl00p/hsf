@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HSF Calculator</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        pre { white-space: pre-wrap; }
+        button { margin: 10px 0; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Heliobiology Solar Function Calculator 0.09</h1>
+    <button onclick="loadData()">Load Latest SRS Data</button>
+    <div>
+        <pre id="output">Click the button above to load data...</pre>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                document.getElementById('output').textContent = 'Loading...';
+                const response = await fetch('https://services.swpc.noaa.gov/text/solar-regions.txt');
+                const text = await response.text();
+								console.log('Raw SRS data:', text); 
+                const result = processData(text);
+                document.getElementById('output').textContent = result;
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error loading data: ' + error.message;
+            }
+        }
+
+ function processData(text) {
+    // Extract the header and find where region data starts
+    const lines = text.split('\n');
+    const regionStartIndex = lines.findIndex(line => 
+        line.trim().match(/^\d+\s+[NS]\d+[EW]\d+/)
+    );
+    
+    if (regionStartIndex === -1) {
+        console.log('Debug: Could not find start of region data');
+        console.log('First few lines:', lines.slice(0, 10).join('\n'));
+        return 'Could not parse SRS data format.';
+    }
+
+    // Format the output with original header
+    let output = lines.slice(0, regionStartIndex).join('\n') + '\n';
+    
+    // Process each region line
+    for (let i = regionStartIndex; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line || line.startsWith('IA.')) break;
+        
+        // Try to parse the region data
+        try {
+            const region = parseRegionLine(line);
+            const hsf = calculateHelioscreamFactor(region);
+            
+            // Add the original line plus HSF
+            output += `${line} | HSF: ${hsf.points.toString().padStart(2, '0')} (${hsf.percentage}%) - ${hsf.category}\n`;
+        } catch (e) {
+            console.log('Parsing error for line:', line);
+            console.log('Error:', e);
+            // If parsing fails, just include the original line
+            output += line + '\n';
+        }
+    }
+    
+    return output;
+}
+
+function parseRegionLine(line) {
+    // Remove any weird characters
+    line = line.replace(/^[–-]\s*/, '');
+    
+    const parts = line.trim().split(/\s+/);
+    
+    // Ensure we have enough parts
+    if (parts.length < 7) {
+        throw new Error('Insufficient line data: ' + line);
+    }
+    
+    const locationMatch = parts[1].match(/([NS])(\d+)([EW])(\d+)/);
+    
+    return {
+        number: parts[0],
+        location: parts[1],
+        hemisphere: locationMatch ? locationMatch[1] : '',
+        latitude: locationMatch ? parseInt(locationMatch[2]) : 0,
+        direction: locationMatch ? locationMatch[3] : '',
+        longitude: locationMatch ? parseInt(locationMatch[4]) : 0,
+        carrington: parseInt(parts[2]),
+        area: parseInt(parts[3]),
+        classification: parts[5],
+        spotCount: parseInt(parts[6]),
+        magneticType: parts[7] || 'A'
+    };
+}
+function calculateHelioscreamFactor(region) {
+    console.log('Detailed Calculation for Region ' + region.number);
+    console.log('Full Region Object:', JSON.stringify(region, null, 2));
+    
+    let points = 0;
+    let pointBreakdown = {};
+    
+    // 1. Magnetic classification
+    if (region.magneticType.includes('A')) {
+        pointBreakdown.magneticType = 1;
+        points += 1;
+        console.log('Magnetic Type (Alpha): 1 point');
+    } else if (region.magneticType.includes('BGD')) {
+        pointBreakdown.magneticType = 15;
+        points += 15;
+        console.log('Magnetic Type (Beta-Gamma-Delta): 15 points');
+    } else if (region.magneticType.includes('BG')) {
+        pointBreakdown.magneticType = 9;
+        points += 9;
+        console.log('Magnetic Type (Beta-Gamma): 9 points');
+    } else if (region.magneticType.includes('BD')) {
+        pointBreakdown.magneticType = 6;
+        points += 6;
+        console.log('Magnetic Type (Beta-Delta): 6 points');
+    } else if (region.magneticType.includes('B')) {
+        pointBreakdown.magneticType = 3;
+        points += 3;
+        console.log('Magnetic Type (Beta): 3 points');
+    } else {
+        pointBreakdown.magneticType = 1;
+        points += 1;
+        console.log('Unknown Magnetic Type: 1 point (default)');
+    }
+    
+    // 2. Spot classification
+    const spotClass = region.classification.charAt(0);
+    if (['D', 'E', 'F'].includes(spotClass)) {
+        pointBreakdown.spotClassification = 5;
+        points += 5;
+        console.log(`Spot Classification (${spotClass}, complex): 5 points`);
+    } else if (spotClass === 'C') {
+        pointBreakdown.spotClassification = 3;
+        points += 3;
+        console.log('Spot Classification (C, moderate): 3 points');
+    } else {
+        pointBreakdown.spotClassification = 1;
+        points += 1;
+        console.log(`Spot Classification (${spotClass}, simple): 1 point`);
+    }
+    
+    // 3. Position relative to central meridian
+    const meridianPoints = calculateCentralMeridianPoints(region.longitude);
+    pointBreakdown.meridianPosition = meridianPoints;
+    points += meridianPoints;
+    console.log(`Meridian Position (${region.longitude}): ${meridianPoints} points`);
+    
+    // 4. Area size
+    const area = region.area;
+    if (area > 200) {
+        pointBreakdown.areaSize = 7;
+        points += 7;
+        console.log(`Area (${area}): 7 points`);
+    } else if (area > 100) {
+        pointBreakdown.areaSize = 5;
+        points += 5;
+        console.log(`Area (${area}): 5 points`);
+    } else if (area >= 50) {
+        pointBreakdown.areaSize = 3;
+        points += 3;
+        console.log(`Area (${area}): 3 points`);
+    } else {
+        pointBreakdown.areaSize = 1;
+        points += 1;
+        console.log(`Area (${area}): 1 point`);
+    }
+    
+    // 5. Sunspot count
+    const spotCount = region.spotCount;
+    if (spotCount >= 16) {
+        pointBreakdown.spotCount = 7;
+        points += 7;
+        console.log(`Spot Count (${spotCount}): 7 points`);
+    } else if (spotCount >= 9) {
+        pointBreakdown.spotCount = 5;
+        points += 5;
+        console.log(`Spot Count (${spotCount}): 5 points`);
+    } else if (spotCount >= 4) {
+        pointBreakdown.spotCount = 3;
+        points += 3;
+        console.log(`Spot Count (${spotCount}): 3 points`);
+    } else {
+        pointBreakdown.spotCount = 1;
+        points += 1;
+        console.log(`Spot Count (${spotCount}): 1 point`);
+    }
+    
+    // Calculate percentage
+    const percentage = (points / 44) * 100;
+    
+    // Determine risk category
+    let category;
+    if (percentage <= 25) {
+        category = 'Low';
+    } else if (percentage <= 50) {
+        category = 'Moderate';
+    } else if (percentage <= 75) {
+        category = 'High';
+    } else {
+        category = 'Extreme';
+    }
+    
+    console.log('Point Breakdown:', pointBreakdown);
+    console.log(`Total Points: ${points}`);
+    console.log(`Total Points from Breakdown: ${Object.values(pointBreakdown).reduce((a, b) => a + b, 0)}`);
+    console.log(`Percentage: ${percentage.toFixed(1)}%`);
+    console.log(`Category: ${category}`);
+    
+    return {
+        points,
+        percentage: percentage.toFixed(1),
+        category
+    };
+}
+
+function calculateCentralMeridianPoints(longitude) {
+    console.log('Longitude input:', longitude);
+    const absLong = Math.abs(longitude);
+    console.log('Absolute longitude:', absLong);
+    
+    if (absLong <= 15) {
+        return 10;  // Central
+    } else if (absLong <= 30) {
+        return 7;   // Near-central
+    } else if (absLong <= 60) {
+        return 3;   // Limb
+    } else {
+        return 1;   // Far limb
+    }
+}
+	    
+    </script>
+</body>
+</html>
