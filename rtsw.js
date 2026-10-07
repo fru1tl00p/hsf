@@ -108,6 +108,9 @@ function shareText(pull, note, now, part) {
     lines.push("", "Last 24 h summary");
     lines.push(...summaryLines(pull, end));
   }
+  if (Array.isArray(pull.brief) && pull.brief.length) {
+    lines.push("", ...pull.brief);
+  }
   return lines.join("\n");
 }
 function lastSample(points, pick) {

@@ -1,4 +1,5 @@
 import { MAG_URL, WIND_URL, auditLines, ingest, l1Log, shareText, stamp } from "./rtsw.js";
+import { loadBrief } from "./context.js";
 
 const STORE = "l1-glance-v1";
 
@@ -98,8 +99,13 @@ async function fetchNow() {
   busy = true;
   render();
   try {
-    const [mag, wind] = await Promise.all([readFeed(MAG_URL, "mag"), readFeed(WIND_URL, "plasma")]);
+    const [mag, wind, brief] = await Promise.all([
+      readFeed(MAG_URL, "mag"),
+      readFeed(WIND_URL, "plasma"),
+      loadBrief(Date.now()),
+    ]);
     const next = ingest(mag, wind, Date.now());
+    next.brief = brief;
     if (!next.mag.points.length && !next.wind.points.length) throw new Error("no active samples");
     l1Log("fetch ok", {
       at: stamp(next.fetchedAt),
