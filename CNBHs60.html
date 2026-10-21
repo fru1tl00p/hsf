@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNB Nowcast Hp30 Visualizer</title>
+    <!-- Tailwind CSS for clean styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <div class="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-6 flex flex-col gap-6">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-white">Nowcast Hp30 index</h1>
+                <p class="text-xs text-slate-400 mt-1">GFZ Helmholtz Centre for Geosciences (CC BY 4.0) — Station: <span class="text-sky-400 font-semibold">CNB (Canberra)</span></p>
+            </div>
+            
+            <!-- Controls -->
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <button id="fetch-btn" onclick="fetchLiveData()" class="flex-1 md:flex-none bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition-colors cursor-pointer shadow-md">
+                    Fetch Live Data
+                </button>
+                <button id="export-btn" onclick="exportChartAsPNG()" disabled class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-medium text-sm px-4 py-2 rounded-lg transition-colors cursor-pointer border border-slate-700">
+                    Export PNG
+                </button>
+            </div>
+        </div>
+
+        <!-- Status / Error Banner -->
+        <div id="status-banner" class="hidden p-4 rounded-lg text-sm font-medium"></div>
+
+        <!-- Chart Container -->
+        <div class="relative w-full h-[400px] bg-white rounded-lg p-4 shadow-inner">
+            <canvas id="hpChart"></canvas>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="text-xs text-slate-500 flex justify-between items-center pt-2 border-t border-slate-800/60">
+            <span>Thresholds: <span class="text-green-500 font-bold">&lt;4</span> (Green) | <span class="text-yellow-400 font-bold">4 to &lt;6</span> (Yellow) | <span class="text-red-500 font-bold">≥6</span> (Red)</span>
+            <span id="last-updated">Status: Ready for manual fetch</span>
+        </div>
+
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        let chartInstance = null;
+
+        function showStatus(message, type = 'info') {
+            const banner = document.getElementById('status-banner');
+            banner.classList.remove('hidden', 'bg-red-950/80', 'text-red-200', 'border', 'border-red-800', 'bg-sky-950/80', 'text-sky-200', 'border-sky-800');
+            
+            if (type === 'error') {
+                banner.classList.add('bg-red-950/80', 'text-red-200', 'border', 'border-red-800');
+            } else {
+                banner.classList.add('bg-sky-950/80', 'text-sky-200', 'border', 'border-sky-800');
+            }
+            banner.textContent = message;
+        }
+
+        function hideStatus() {
+            const banner = document.getElementById('status-banner');
+            banner.classList.add('hidden');
+        }
+
+        async function fetchLiveData() {
+            const btn = document.getElementById('fetch-btn');
+            const exportBtn = document.getElementById('export-btn');
+            btn.disabled = true;
+            btn.textContent = "Fetching...";
+            showStatus("Connecting to GFZ Hp30 web service endpoint...", "info");
+
+            try {
+                // Official GFZ App JSON endpoint
+                const response = await fetch('https://kp.gfz.de/app/json/');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Validate data structure for CNB station in Hp30 payload
+                // The GFZ JSON structure typically nests station data or provides an array. 
+                // We inspect standard kp.gfz.de schema keys (e.g., cnb, stations, or hp30 array)
+                parseAndRenderData(data);
+                
+                hideStatus();
+                exportBtn.disabled = false;
+                document.getElementById('last-updated').textContent = `Last fetched: ${new Date().toUTCString()}`;
+            } catch (error) {
+                console.error("Fetch failed:", error);
+                showStatus(`Failed to fetch live GFZ data: ${error.message}. Please check network connection or CORS policy.`, "error");
+                document.getElementById('last-updated').textContent = "Status: Fetch failed";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Fetch Live Data";
+            }
+        }
+
+        function parseAndRenderData(rawData) {
+            // Note: Depending on the exact live JSON schema dictionary layout returned by kp.gfz.de/app/json/,
+            // we extract the timestamps and station-specific values for CNB. 
+            // If the schema requires specific path navigation (e.g. rawData.stations.CNB or rawData.Hp30), 
+            // this parser handles standard GFZ JSON arrays or throws clean structural feedback.
+            
+            let labels = [];
+            let values = [];
+
+            // Example robust parser mapping standard GFZ keys if present, 
+            // or falling back to inspecting standard arrays in the payload
+            let timeSeries = null;
+
+            if (rawData && rawData.cnb) {
+                timeSeries = rawData.cnb;
+            } else if (rawData && rawData.stations && rawData.stations.CNB) {
+                timeSeries = rawData.stations.CNB;
+            } else if (Array.isArray(rawData)) {
+                // Find entry matching station CNB if passed as flat array
+                const cnbEntry = rawData.find(item => item.station === "CNB" || item.id === "CNB");
+                timeSeries = cnbEntry ? cnbEntry.data || cnbEntry.values : rawData;
+            } else {
+                // If structure is nested differently in the live API response, check top-level keys
+                // Let's inspect or map standard Hp30 time entries format [timestamp, value]
+                timeSeries = rawData.Hp30 || rawData.data;
+            }
+
+            if (!timeSeries || !Array.isArray(timeSeries)) {
+                throw new Error("Data received from GFZ endpoint did not contain expected CNB time-series array structure.");
+            }
+
+            // Map time series items
+            timeSeries.forEach(entry => {
+                let t = entry.time || entry[0];
+                let v = entry.hp30 !== undefined ? entry.hp30 : (entry.value !== undefined ? entry.value : entry[1]);
+                if (t && v !== undefined) {
+                    labels.push(new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC');
+                    values.push(parseFloat(v));
+                }
+            });
+
+            if (labels.length === 0) {
+                throw new Error("No valid time/value records found for CNB in the retrieved payload.");
+            }
+
+            renderChart(labels, values);
+        }
+
+        function renderChart(labels, values) {
+            const ctx = document.getElementById('hpChart').getContext('2d');
+            
+            // Color coding based on Hp30 standard convention: <4 Green, 4-<6 Yellow, >=6 Red
+            const barColors = values.map(val => {
+                if (val >= 6) return '#ef4444'; // Red
+                if (val >= 4) return '#eab308'; // Yellow
+                return '#22c55e'; // Green
+            });
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'CNB Hp30 Index',
+                        data: values,
+                        backgroundColor: barColors,
+                        borderWidth: 0,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.9
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 9,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#475569'
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Hp30 index',
+                                color: '#1e293b',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#475569',
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
+                            grid: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'time (UTC)',
+                                color: '#1e293b',
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `CNB Hp30: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportChartAsPNG() {
+            if (!chartInstance) return;
+            const imageURL = chartInstance.toBase64Image();
+            const downloadLink = document.createElement('a');
+            downloadLink.href = imageURL;
+            downloadLink.download = `CNB_Hp30_${new Date().toISOString().slice(0,10)}.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+</body>
+</html>
