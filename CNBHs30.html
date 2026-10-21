@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNB Nowcast Hp30 Visualizer</title>
+    <!-- Highcharts CDN -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/offline-exporting.js"></script>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: monospace, sans-serif;
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        button {
+            background: #222;
+            color: #eee;
+            border: 1px solid #444;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        button:hover {
+            background: #333;
+        }
+        #container {
+            width: 100%;
+            height: 450px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+        }
+        .footer {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h2>Nowcast Hp30 index — CNB (Canberra)</h2>
+            <small style="color: #888;">GFZ Helmholtz Centre for Geosciences</small>
+        </div>
+        <div>
+            <button onclick="loadData()">Fetch Local Archive</button>
+        </div>
+    </div>
+
+    <div id="container"></div>
+
+    <div class="footer">
+        <span>Thresholds: &lt;4 (Green) | 4 to &lt;6 (Yellow) | &ge;6 (Red)</span>
+        <span id="status">Status: Ready</span>
+    </div>
+
+    <script>
+        async function loadData() {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = "Status: Loading data/latest.json...";
+
+            try {
+                // Fetches directly from your automated GitHub repository archive
+                const response = await fetch('./data/latest.json');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const rawData = await response.json();
+                parseAndRender(rawData);
+                statusEl.textContent = `Status: Successfully loaded at ${new Date().toUTCString()}`;
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = `Status: Error loading data — ${error.message}`;
+            }
+        }
+
+        function parseAndRender(rawData) {
+            // Locate station CNB records
+            let records = null;
+            if (Array.isArray(rawData)) {
+                const cnb = rawData.find(item => (item.station || item.id || '').toUpperCase() === 'CNB');
+                records = cnb ? (cnb.data || cnb.values) : rawData;
+            } else if (rawData.stations) {
+                const key = Object.keys(rawData.stations).find(k => k.toUpperCase() === 'CNB');
+                records = key ? rawData.stations[key] : null;
+            } else {
+                records = rawData.data || rawData;
+            }
+
+            if (!Array.isArray(records)) {
+                throw new Error("Could not find valid time-series array for CNB in JSON.");
+            }
+
+            let categories = [];
+            let seriesData = [];
+
+            records.forEach(entry => {
+                let t = entry.time || entry.timestamp || (Array.isArray(entry) ? entry[0] : null);
+                let v = entry.hs30 !== undefined ? entry.hs30 : (entry.hp30 !== undefined ? entry.hp30 : (entry.value !== undefined ? entry.value : (Array.isArray(entry) ? entry[1] : null)));
+
+                if (t && v !== null && v !== undefined) {
+                    let timeStr = new Date(t).toISOString().slice(11, 16) + ' UTC';
+                    categories.push(timeStr);
+                    
+                    let val = parseFloat(v);
+                    let color = '#22c55e'; // Green < 4
+                    if (val >= 6) color = '#ef4444'; // Red >= 6
+                    else if (val >= 4) color = '#eab308'; // Yellow 4-<6
+
+                    seriesData.push({
+                        y: val,
+                        color: color
+                    });
+                }
+            });
+
+            renderHighchart(categories, seriesData);
+        }
+
+        function renderHighchart(categories, data) {
+            Highcharts.chart('container', {
+                chart: {
+                    type: 'column',
+                    backgroundColor: '#1a1a1a',
+                    style: { fontFamily: 'monospace' }
+                },
+                title: { text: null },
+                credits: { enabled: false },
+                xAxis: {
+                    categories: categories,
+                    labels: { style: { color: '#888' } },
+                    lineColor: '#333',
+                    tickColor: '#333'
+                },
+                yAxis: {
+                    min: 0,
+                    max: 9,
+                    tickInterval: 1,
+                    title: { text: 'Hp30 index', style: { color: '#888' } },
+                    gridLineColor: '#262626',
+                    labels: { style: { color: '#888' } }
+                },
+                legend: { enabled: false },
+                plotOptions: {
+                    column: {
+                        pointPadding: 0.05,
+                        groupPadding: 0.05,
+                        borderWidth: 0
+                    }
+                },
+                tooltip: {
+                    headerFormat: '<b>{point.key}</b><br/>',
+                    pointFormat: 'CNB Hp30: <b>{point.y}</b>'
+                },
+                series: [{
+                    name: 'CNB Hp30',
+                    data: data
+                }]
+            });
+        }
+
+        // Auto-load on page open
+        loadData();
+    </script>
+</body>
+</html>
