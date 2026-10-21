@@ -55,7 +55,7 @@
 
     <div class="header">
         <div>
-            <h2>Nowcast Hp30 index — CNB (Canberra)</h2>
+            <h2>Nowcast Hs30 index — CNB (Canberra)</h2>
             <small style="color: #888;">GFZ Helmholtz Centre for Geosciences</small>
         </div>
         <div>
@@ -76,7 +76,6 @@
             statusEl.textContent = "Status: Loading data/latest.json...";
 
             try {
-                // Fetches directly from your automated GitHub repository archive
                 const response = await fetch('./data/latest.json');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
@@ -90,31 +89,35 @@
         }
 
         function parseAndRender(rawData) {
-            // Locate station CNB records
-            let records = null;
-            if (Array.isArray(rawData)) {
-                const cnb = rawData.find(item => (item.station || item.id || '').toUpperCase() === 'CNB');
-                records = cnb ? (cnb.data || cnb.values) : rawData;
-            } else if (rawData.stations) {
-                const key = Object.keys(rawData.stations).find(k => k.toUpperCase() === 'CNB');
-                records = key ? rawData.stations[key] : null;
-            } else {
-                records = rawData.data || rawData;
+            // Find a key matching CNB (e.g., CNB_MEDIAN, CNB_MAX, or just CNB)
+            const keys = Object.keys(rawData);
+            let targetKey = keys.find(k => k.toUpperCase().startsWith('CNB_') || k.toUpperCase() === 'CNB');
+            
+            if (!targetKey && keys.length > 0) {
+                // Fallback to first available key if CNB isn't explicitly prefixed
+                targetKey = keys.find(k => k.toUpperCase().includes('CNB')) || keys[0];
             }
 
-            if (!Array.isArray(records)) {
-                throw new Error("Could not find valid time-series array for CNB in JSON.");
+            if (!targetKey || !rawData[targetKey]) {
+                throw new Error("Could not find a valid CNB data series key in the JSON payload.");
             }
+
+            const timeMap = rawData[targetKey];
+            if (typeof timeMap !== 'object' || timeMap === null) {
+                throw new Error(`Data structure for key '${targetKey}' is not a valid timestamp dictionary.`);
+            }
+
+            // Sort timestamps chronologically
+            const sortedTimestamps = Object.keys(timeMap).sort();
 
             let categories = [];
             let seriesData = [];
 
-            records.forEach(entry => {
-                let t = entry.time || entry.timestamp || (Array.isArray(entry) ? entry[0] : null);
-                let v = entry.hs30 !== undefined ? entry.hs30 : (entry.hp30 !== undefined ? entry.hp30 : (entry.value !== undefined ? entry.value : (Array.isArray(entry) ? entry[1] : null)));
-
-                if (t && v !== null && v !== undefined) {
-                    let timeStr = new Date(t).toISOString().slice(11, 16) + ' UTC';
+            sortedTimestamps.forEach(t => {
+                let v = timeMap[t];
+                if (v !== null && v !== undefined) {
+                    // Format time label to UTC HH:mm
+                    let timeStr = t.slice(11, 16) + ' UTC';
                     categories.push(timeStr);
                     
                     let val = parseFloat(v);
@@ -129,17 +132,21 @@
                 }
             });
 
-            renderHighchart(categories, seriesData);
+            renderHighchart(categories, seriesData, targetKey);
         }
 
-        function renderHighchart(categories, data) {
+        function renderHighchart(categories, data, seriesName) {
             Highcharts.chart('container', {
                 chart: {
                     type: 'column',
                     backgroundColor: '#1a1a1a',
                     style: { fontFamily: 'monospace' }
                 },
-                title: { text: null },
+                title: { 
+                    text: `Series: ${seriesName}`, 
+                    style: { color: '#888', fontSize: '12px' },
+                    align: 'left'
+                },
                 credits: { enabled: false },
                 xAxis: {
                     categories: categories,
@@ -151,7 +158,7 @@
                     min: 0,
                     max: 9,
                     tickInterval: 1,
-                    title: { text: 'Hp30 index', style: { color: '#888' } },
+                    title: { text: 'Hs30 Index', style: { color: '#888' } },
                     gridLineColor: '#262626',
                     labels: { style: { color: '#888' } }
                 },
@@ -165,10 +172,10 @@
                 },
                 tooltip: {
                     headerFormat: '<b>{point.key}</b><br/>',
-                    pointFormat: 'CNB Hp30: <b>{point.y}</b>'
+                    pointFormat: 'Value: <b>{point.y}</b>'
                 },
                 series: [{
-                    name: 'CNB Hp30',
+                    name: seriesName,
                     data: data
                 }]
             });
